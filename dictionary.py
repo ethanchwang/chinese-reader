@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Tuple
 class ChineseDictionary:
     """Chinese-English dictionary with pinyin lookup"""
     
-    def __init__(self, dict_file: str = 'cedict_ts.u8'):
+    def __init__(self, dict_file: str = 'resources/cedict_ts.u8'):
         """
         Initialize the dictionary by parsing the CC-CEDICT file
         

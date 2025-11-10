@@ -17,15 +17,15 @@ CORS(app)  # Enable CORS for frontend communication
 
 if not Path('cedict_ts.u8').exists():
     print("Downloading CC-CEDICT dictionary...")
-    response = requests.get('wget https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.zip')
-    with open('cedict_1_0_ts_utf-8_mdbg.zip', 'wb') as f:
+    response = requests.get('https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.zip')
+    with open('resources/cedict_1_0_ts_utf-8_mdbg.zip', 'wb') as f:
         f.write(response.content)
     print("Unzipping dictionary...")
-    with zipfile.ZipFile('cedict_1_0_ts_utf-8_mdbg.zip', 'r') as zip_ref:
-        zip_ref.extractall('.')
+    with zipfile.ZipFile('resources/cedict_1_0_ts_utf-8_mdbg.zip', 'r') as zip_ref:
+        zip_ref.extractall('resources')
     print("Dictionary downloaded and unzipped successfully")
     print("deleting zip file...")
-    os.remove('cedict_1_0_ts_utf-8_mdbg.zip')
+    os.remove('resources/cedict_1_0_ts_utf-8_mdbg.zip')
     print("zip file deleted successfully")
 
 # Initialize dictionary at startup - this loads it once when the app starts
