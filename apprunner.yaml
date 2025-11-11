@@ -7,4 +7,4 @@ build:
 run: 
   network:
     port: 8080
-  command: python -m gunicorn app:app --bind 0.0.0.0:8080 --log-level info --access-logfile - --error-logfile - --capture-output
+  command: python3 -m gunicorn app:app --bind 0.0.0.0:8080 --log-level info --access-logfile - --error-logfile - --capture-output
