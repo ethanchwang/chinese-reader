@@ -13,7 +13,7 @@ import zipfile
 import os
 
 app = Flask(__name__, static_folder='.')
-CORS(app)  # Enable CORS for frontend communication
+CORS(app, resources={r"/api/*": {"origins": "*"}})  # Enable CORS for frontend communication
 
 if not Path('resources/cedict_ts.u8').exists():
     print("Downloading CC-CEDICT dictionary...")
@@ -34,7 +34,7 @@ dictionary = ChineseDictionary()
 print("Dictionary ready!")
 
 # API routes must come before catch-all routes
-@app.route('/api/process', methods=['POST'])
+@app.route('/api/process', methods=['POST','OPTIONS'])
 def process_text():
     """
     API endpoint to process Chinese text and return phrases with pinyin and definitions.
@@ -48,7 +48,7 @@ def process_text():
     result = process_chinese_text(text, dictionary)
     return jsonify(result)
 
-@app.route('/api/health', methods=['GET'])
+@app.route('/api/health', methods=['GET','OPTIONS'])
 def health_check():
     """Health check endpoint"""
     return jsonify({'status': 'ok', 'message': 'Chinese Reader API is running'})

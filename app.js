@@ -1,6 +1,3 @@
-// API endpoint - will be set up with Python backend
-const API_BASE_URL = 'http://localhost:5000/api';
-
 // Sample text
 const SAMPLE_TEXT = '中国政府周日宣布将暂停对五种关键矿物的出口管制，为期一年。这些矿物是制造某些半导体以及炸药、穿甲弹、电池和核反应堆所必需的。\n\n中国商务部发布的这份公告澄清了10月30日特朗普总统与中国领导人习近平在韩国举行会晤后，双方政府各自发表的声明中存在的一个关键差异。\n\n会后，中国方面表示同意暂停一系列关于稀土金属及锂离子电池、半导体和太阳能电池板制造设备的出口管制规定，期限为一年。商务部于上周五暂停了这些管制措施。\n\n然而，中国在峰会后的声明并未提及放宽去年12月商务部对另外五种关键材料（虽非稀土金属）所实施的出口限制。白宫声明则称，中国还同意发放所谓的"通用许可"，以便更容易获得这些矿物。';
 
@@ -36,7 +33,7 @@ document.getElementById('process-btn').addEventListener('click', async () => {
     
     try {
         // Send text to Python backend for processing (preserve line breaks)
-        const response = await fetch(`${API_BASE_URL}/process`, {
+        const response = await fetch(`/api/process`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
