@@ -3,8 +3,10 @@ runtime: python311
 build:
   commands:
     build:
-      - python3 -m pip install -r requirements.txt
+      # - python3 -m pip install -r requirements.txt
 run: 
   network:
     port: 8080
+  pre-run:
+    - pip3 install -r requirements.txt
   command: python3 -m gunicorn app:app --bind 0.0.0.0:8080 --log-level info --access-logfile - --error-logfile - --capture-output
