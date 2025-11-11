@@ -16,6 +16,8 @@ app = Flask(__name__, static_folder='.')
 CORS(app, resources={r"/api/*": {"origins": "*"}})  # Enable CORS for frontend communication
 
 if not Path('resources/cedict_ts.u8').exists():
+    if not os.path.exists('resources'):
+        os.makedirs('resources')
     print("Downloading CC-CEDICT dictionary...")
     response = requests.get('https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.zip')
     with open('resources/cedict_1_0_ts_utf-8_mdbg.zip', 'wb') as f:
