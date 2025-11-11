@@ -3,7 +3,7 @@ runtime: python311
 build:
   commands:
     build:
-      - pip install -r requirements.txt
+      - python -m pip install -r requirements.txt
 run: 
   network:
     port: 8080
