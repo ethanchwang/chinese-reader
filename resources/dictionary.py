@@ -3,10 +3,12 @@ Dictionary parser for CC-CEDICT format
 Parses the cedict_ts.u8 file and provides lookup functionality
 """
 
+import os
 import re
 from typing import Dict, List, Optional
 from huggingface_hub import InferenceClient
-import os
+
+from utils.aws import get_ssm_parameter
 
 
 def get_huggingface_token():
@@ -19,17 +21,9 @@ def get_huggingface_token():
         return local_token
 
     try:
-        import boto3
-
-        ssm = boto3.client("ssm")
-
-        response = ssm.get_parameter(Name=SSM_PARAMETER_NAME, WithDecryption=True)
-
-        ssm_token = response["Parameter"]["Value"]
+        ssm_token = get_ssm_parameter(SSM_PARAMETER_NAME, with_decryption=True)
         print("Token retrieved successfully from SSM.")
-
         return ssm_token
-
     except Exception as e:
         print(f"ERROR: Could not retrieve token from SSM: {e}")
         raise RuntimeError(

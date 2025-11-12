@@ -3,75 +3,127 @@ Chinese Article Reader Assistant - Backend API
 This will be implemented later with proper Chinese text processing.
 """
 
-from flask import Flask, request, jsonify, send_from_directory
+import base64
+
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
+from botocore.exceptions import BotoCoreError, ClientError
+
 from text_processor import process_chinese_text
-from dictionary import ChineseDictionary
-from pathlib import Path
-import requests
-import zipfile
-import os
+from resources.utils import init_dictionary
+from utils.aws import get_polly_client
 
-app = Flask(__name__, static_folder='.')
-CORS(app, resources={r"/api/*": {"origins": "*"}})  # Enable CORS for frontend communication
 
-if not Path('resources/cedict_ts.u8').exists():
-    if not os.path.exists('resources'):
-        os.makedirs('resources')
-    print("Downloading CC-CEDICT dictionary...")
-    response = requests.get('https://www.mdbg.net/chinese/export/cedict/cedict_1_0_ts_utf-8_mdbg.zip')
-    with open('resources/cedict_1_0_ts_utf-8_mdbg.zip', 'wb') as f:
-        f.write(response.content)
-    print("Unzipping dictionary...")
-    with zipfile.ZipFile('resources/cedict_1_0_ts_utf-8_mdbg.zip', 'r') as zip_ref:
-        zip_ref.extractall('resources')
-    print("Dictionary downloaded and unzipped successfully")
-    print("deleting zip file...")
-    os.remove('resources/cedict_1_0_ts_utf-8_mdbg.zip')
-    print("zip file deleted successfully")
+app = Flask(__name__)
+CORS(
+    app, resources={r"/api/*": {"origins": "*"}}
+)  # Enable CORS for frontend communication
 
-# Initialize dictionary at startup - this loads it once when the app starts
-print("Initializing Chinese dictionary...")
-dictionary = ChineseDictionary()
-print("Dictionary ready!")
+dictionary = init_dictionary()
+
 
 # API routes must come before catch-all routes
-@app.route('/api/process', methods=['POST','OPTIONS'])
+@app.route("/api/process", methods=["POST", "OPTIONS"])
 def process_text():
     """
     API endpoint to process Chinese text and return phrases with pinyin and definitions.
     """
     data = request.get_json()
-    text = data.get('text', '')
-    
+    text = data.get("text", "")
+
     if not text:
-        return jsonify({'error': 'No text provided'}), 400
-    
+        return jsonify({"error": "No text provided"}), 400
+
     result = process_chinese_text(text, dictionary)
     return jsonify(result)
 
-@app.route('/api/health', methods=['GET','OPTIONS'])
+
+@app.route("/api/health", methods=["GET", "OPTIONS"])
 def health_check():
     """Health check endpoint"""
-    return jsonify({'status': 'ok', 'message': 'Chinese Reader API is running'})
+    return jsonify({"status": "ok", "message": "Chinese Reader API is running"})
+
+
+@app.route("/api/read-aloud", methods=["POST", "OPTIONS"])
+def read_aloud():
+    """
+    Convert processed text into speech using AWS Polly and return as base64 audio.
+    """
+    data = request.get_json(silent=True) or {}
+    text = (data.get("text") or "").strip()
+
+    if not text:
+        return jsonify({"error": "No text provided"}), 400
+
+    try:
+        polly = get_polly_client()
+    except Exception as exc:  # pragma: no cover - surface initialization errors
+        return (
+            jsonify(
+                {
+                    "error": "Failed to initialize AWS Polly client",
+                    "details": str(exc),
+                }
+            ),
+            500,
+        )
+
+    voice_id = "Zhiyu"
+    language_code = "cmn-CN"
+    engine = "standard"
+
+    synthesize_kwargs = {
+        "Text": text,
+        "OutputFormat": "mp3",
+        "VoiceId": voice_id,
+    }
+
+    if language_code:
+        synthesize_kwargs["LanguageCode"] = language_code
+
+    if engine:
+        synthesize_kwargs["Engine"] = engine
+
+    try:
+        response = polly.synthesize_speech(**synthesize_kwargs)
+    except (BotoCoreError, ClientError) as exc:
+        return (
+            jsonify(
+                {
+                    "error": "AWS Polly synthesis failed",
+                    "details": str(exc),
+                }
+            ),
+            500,
+        )
+
+    audio_stream = response.get("AudioStream")
+    if not audio_stream:
+        return jsonify({"error": "No audio stream returned from AWS Polly"}), 500
+
+    with audio_stream:
+        audio_bytes = audio_stream.read()
+
+    if not audio_bytes:
+        return jsonify({"error": "AWS Polly returned empty audio"}), 500
+
+    audio_base64 = base64.b64encode(audio_bytes).decode("utf-8")
+
+    return jsonify(
+        {
+            "audio": audio_base64,
+            "contentType": response.get("ContentType", "audio/mpeg"),
+        }
+    )
+
 
 # Serve the main HTML file
-@app.route('/')
+@app.route("/")
 def index():
-    return send_from_directory('.', 'index.html')
+    return render_template("index.html")
 
-# Serve static files (CSS, JS) - must come after API routes
-@app.route('/<path:filename>')
-def static_files(filename):
-    # Don't serve API routes
-    if filename.startswith('api/'):
-        return jsonify({'error': 'Not found'}), 404
-    # Only serve specific static files
-    if filename in ['styles.css', 'app.js']:
-        return send_from_directory('.', filename)
-    return jsonify({'error': 'Not found'}), 404
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     print("Starting Chinese Reader Assistant...")
     print("Open your browser and go to: http://localhost:5000")
     print("API endpoint: http://localhost:5000/api/process")

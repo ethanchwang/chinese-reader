@@ -208,3 +208,5 @@ __marimo__/
 
 *.u8
 *.ipynb
+
+test_*.py

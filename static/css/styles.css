@@ -116,6 +116,12 @@ body {
     background: #bbb;
 }
 
+#process-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+    background: #666;
+}
+
 .right-column {
     flex: 1;
     display: flex;
@@ -123,6 +129,53 @@ body {
     background: #000;
     overflow: hidden;
     border-right: 1px solid #333;
+}
+
+.reading-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.reading-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 30px 10px;
+    border-bottom: 1px solid #222;
+    background: #000;
+}
+
+.read-aloud-btn {
+    padding: 8px 16px;
+    background: #fff;
+    color: #000;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+    width: auto;
+}
+
+.read-aloud-btn:hover:enabled {
+    background: #ddd;
+}
+
+.read-aloud-btn:active:enabled {
+    background: #bbb;
+}
+
+.read-aloud-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.read-aloud-audio {
+    width: 100%;
+    max-width: 420px;
+    background: #111;
 }
 
 .details-panel {
@@ -292,4 +345,11 @@ body {
 
 .phrase.active {
     background-color: #444;
+}
+
+.phrase.speaking {
+    background-color: #ffd700;
+    color: #000;
+    font-weight: 600;
+    transition: background-color 0.1s, color 0.1s;
 }

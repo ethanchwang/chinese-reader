@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chinese Article Reader Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+</head>
+
+<body>
+    <div class="container">
+        <div class="left-column">
+            <h1>Chinese Reading Assistant</h1>
+            <div class="input-section">
+                <label for="chinese-text">Enter Chinese Text:</label>
+                <button id="try-sample-btn" class="try-sample-btn">Try Sample</button>
+                <textarea id="chinese-text" placeholder="输入中文文本..." rows="15"></textarea>
+                <button id="process-btn">Process Text</button>
+            </div>
+        </div>
+
+        <div class="right-column">
+            <div class="reading-container">
+                <div class="reading-controls">
+                    <button id="read-aloud-btn" class="read-aloud-btn" disabled>Read Aloud</button>
+                    <audio id="read-aloud-audio" class="read-aloud-audio" controls hidden></audio>
+                </div>
+                <div id="reading-area" class="reading-area">
+                    <p class="placeholder">Processed text will appear here. Click on phrases to see pinyin and
+                        definitions.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="details-panel">
+            <div class="details-header">
+                <h2>Phrase Details</h2>
+                <button id="export-vocab-btn" class="export-btn" title="Export saved vocab to Anki CSV">Export Vocab
+                    (0)</button>
+            </div>
+            <div id="phrase-details" class="phrase-details">
+                <p class="details-placeholder">Click on a phrase to see details</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+
+</html>
