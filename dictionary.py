@@ -20,7 +20,14 @@ def get_huggingface_token():
         return local_token
 
     try:
+        print("boto get credentials", boto3.Session().get_credentials())
+        session = boto3.Session()
+        creds = session.get_credentials()
+        print("AWS credentials from environment:", creds)
         ssm = boto3.client("ssm")
+
+        sts = boto3.client("sts")
+        print(sts.get_caller_identity())
 
         response = ssm.get_parameter(Name=SSM_PARAMETER_NAME, WithDecryption=True)
 
@@ -31,9 +38,10 @@ def get_huggingface_token():
 
     except Exception as e:
         print(f"ERROR: Could not retrieve token from SSM: {e}")
-        raise RuntimeError(
-            "Hugging Face API token not found in local environment or AWS SSM."
-        )
+        # raise RuntimeError(
+        #     "Hugging Face API token not found in local environment or AWS SSM."
+        # )
+        pass
 
 
 client = InferenceClient(
