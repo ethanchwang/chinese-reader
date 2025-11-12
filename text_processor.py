@@ -1,5 +1,7 @@
 import hanlp
 import unicodedata
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import Future
 
 
 tok = hanlp.load(hanlp.pretrained.tok.COARSE_ELECTRA_SMALL_ZH, devices=["cpu"])
@@ -43,35 +45,45 @@ def process_chinese_text(text, dictionary):
     phrases = segment_chinese_text(text)
     print(phrases)
 
-    for phrase in phrases:
-        if not all(is_chinese_ideograph(w) for w in phrase):
-            processed_phrases.append({"text": phrase, "pinyin": "", "definition": ""})
-            continue
+    with ThreadPoolExecutor(max_workers=20) as executor:
+        for phrase in phrases:
+            if not all(is_chinese_ideograph(w) for w in phrase):
+                processed_phrases.append(
+                    {"text": phrase, "pinyin": "", "definition": ""}
+                )
+                continue
 
-        entries = dictionary.lookup(phrase)
+            entries = dictionary.lookup(phrase)
 
-        if not entries:
-            entry = dictionary.entry(phrase)
-            processed_phrases.append(entry)
-            continue
+            if not entries:
+                entry = dictionary.entry(phrase, executor)
+                processed_phrases.append(entry)
+                continue
 
-        all_pinyin = []
-        all_definitions = []
-        for entry in entries:
-            if entry["pinyin"] and entry["pinyin"] not in all_pinyin:
-                all_pinyin.append(entry["pinyin"])
-            if entry["definition"] and entry["definition"] not in all_definitions:
-                all_definitions.append(entry["definition"])
+            all_pinyin = []
+            all_definitions = []
+            for entry in entries:
+                if entry["pinyin"] and entry["pinyin"] not in all_pinyin:
+                    all_pinyin.append(entry["pinyin"])
+                if entry["definition"] and entry["definition"] not in all_definitions:
+                    all_definitions.append(entry["definition"])
 
-        processed_phrases.append(
-            {
-                "text": phrase,
-                "pinyin": " / ".join(all_pinyin) if all_pinyin else "[Not found]",
-                "definition": " | ".join(all_definitions)
-                if all_definitions
-                else "[Not found]",
-                "all_entries": entries,  # Store all entries for detailed view
-            }
-        )
+            processed_phrases.append(
+                {
+                    "text": phrase,
+                    "pinyin": " / ".join(all_pinyin) if all_pinyin else "[Not found]",
+                    "definition": " | ".join(all_definitions)
+                    if all_definitions
+                    else "[Not found]",
+                    "all_entries": entries,  # Store all entries for detailed view
+                }
+            )
+    for processed_phrase in processed_phrases:
+        if isinstance(processed_phrase["definition"], Future):
+            try:
+                processed_phrase["definition"] = processed_phrase["definition"].result()
+            except Exception as e:
+                print("Error when processing futures", e)
+                processed_phrase["definition"] = "API error"
 
     return {"phrases": processed_phrases, "original_text": text}

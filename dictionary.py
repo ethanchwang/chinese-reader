@@ -4,10 +4,9 @@ Parses the cedict_ts.u8 file and provides lookup functionality
 """
 
 import re
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 from huggingface_hub import InferenceClient
 import os
-import boto3
 
 
 def get_huggingface_token():
@@ -20,14 +19,9 @@ def get_huggingface_token():
         return local_token
 
     try:
-        print("boto get credentials", boto3.Session().get_credentials())
-        session = boto3.Session()
-        creds = session.get_credentials()
-        print("AWS credentials from environment:", creds)
-        ssm = boto3.client("ssm")
+        import boto3
 
-        sts = boto3.client("sts")
-        print(sts.get_caller_identity())
+        ssm = boto3.client("ssm")
 
         response = ssm.get_parameter(Name=SSM_PARAMETER_NAME, WithDecryption=True)
 
@@ -38,10 +32,9 @@ def get_huggingface_token():
 
     except Exception as e:
         print(f"ERROR: Could not retrieve token from SSM: {e}")
-        # raise RuntimeError(
-        #     "Hugging Face API token not found in local environment or AWS SSM."
-        # )
-        pass
+        raise RuntimeError(
+            "Hugging Face API token not found in local environment or AWS SSM."
+        )
 
 
 client = InferenceClient(
@@ -220,17 +213,24 @@ class ChineseDictionary:
             return matches[0]
         return None
 
-    def entry(self, phrase: str) -> Optional[Dict]:
+    def query_hf_chinese_to_english(self, text):
+        result = client.translation(
+            text,
+            model="Helsinki-NLP/opus-mt-zh-en",
+        )
+        return result.translation_text
+
+    def entry(self, phrase: str, executor=None) -> Optional[Dict]:
         matches = self.lookup_best(phrase)
         if matches:
             return matches[0]
 
         print("DEBUG: client translating", phrase)
 
-        result = client.translation(
-            phrase,
-            model="Helsinki-NLP/opus-mt-zh-en",
-        )
+        if executor is not None:
+            result = executor.submit(self.query_hf_chinese_to_english, phrase)
+        else:
+            result = self.query_hf_chinese_to_english(phrase)
 
         # TODO: add traditional/simplified conversion
         pinyin = self.get_pinyin(phrase)
@@ -241,7 +241,7 @@ class ChineseDictionary:
             "simplified": phrase,
             "pinyin": self._format_pinyin(pinyin),
             "pinyin_raw": pinyin,
-            "definition": result.translation_text,
+            "definition": result,
         }
 
         return entry
