@@ -7,11 +7,38 @@ import re
 from typing import Dict, List, Optional, Tuple
 from huggingface_hub import InferenceClient
 import os
-from text_processor import is_chinese_ideograph
+import boto3
+
+
+def get_huggingface_token():
+    LOCAL_ENV_VAR_NAME = "HF_INFERENCE_TOKEN"
+    SSM_PARAMETER_NAME = "/chinese-reader/HF_INFERENCE_TOKEN"
+
+    local_token = os.environ.get(LOCAL_ENV_VAR_NAME)
+    if local_token:
+        print("Token retrieved from local environment variable.")
+        return local_token
+
+    try:
+        ssm = boto3.client("ssm")
+
+        response = ssm.get_parameter(Name=SSM_PARAMETER_NAME, WithDecryption=True)
+
+        ssm_token = response["Parameter"]["Value"]
+        print("Token retrieved successfully from SSM.")
+
+        return ssm_token
+
+    except Exception as e:
+        print(f"ERROR: Could not retrieve token from SSM: {e}")
+        raise RuntimeError(
+            "Hugging Face API token not found in local environment or AWS SSM."
+        )
+
 
 client = InferenceClient(
     provider="hf-inference",
-    api_key=os.environ["HF_INFERENCE_TOKEN"],
+    api_key=get_huggingface_token(),
 )
 
 

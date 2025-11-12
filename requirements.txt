@@ -2,3 +2,6 @@ Flask
 flask-cors
 requests
 gunicorn
+hanlp
+huggingface-hub
+boto3
