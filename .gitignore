@@ -210,3 +210,4 @@ __marimo__/
 *.ipynb
 
 test_*.py
+resources/hsk_vocabulary.json

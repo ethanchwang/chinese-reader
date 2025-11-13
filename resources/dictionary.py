@@ -180,7 +180,7 @@ class ChineseDictionary:
         # Replace all pinyin patterns in the definition
         return re.sub(pinyin_pattern, replace_pinyin, definition)
 
-    def lookup(self, phrase: str) -> Optional[List[Dict]]:
+    def cedict_lookup(self, phrase: str) -> Optional[List[Dict]]:
         """
         Look up a Chinese phrase in the dictionary
 
@@ -191,73 +191,6 @@ class ChineseDictionary:
             List of matching entries, or None if not found
         """
         return self.entries.get(phrase)
-
-    def lookup_best(self, phrase: str) -> Optional[Dict]:
-        """
-        Look up a phrase and return the first (best) match
-
-        Args:
-            phrase: Chinese phrase to look up
-
-        Returns:
-            First matching entry, or None if not found
-        """
-        matches = self.lookup(phrase)
-        if matches:
-            return matches[0]
-        return None
-
-    def query_hf_chinese_to_english(self, text):
-        result = client.translation(
-            text,
-            model="Helsinki-NLP/opus-mt-zh-en",
-        )
-        return result.translation_text
-
-    def entry(self, phrase: str, executor=None) -> Optional[Dict]:
-        matches = self.lookup_best(phrase)
-        if matches:
-            return matches[0]
-
-        print("DEBUG: client translating", phrase)
-
-        if executor is not None:
-            result = executor.submit(self.query_hf_chinese_to_english, phrase)
-        else:
-            result = self.query_hf_chinese_to_english(phrase)
-
-        # TODO: add traditional/simplified conversion
-        pinyin = self.get_pinyin(phrase)
-        pinyin = pinyin if pinyin is not None else ""
-        entry = {
-            "text": phrase,
-            "traditional": phrase,
-            "simplified": phrase,
-            "pinyin": self._format_pinyin(pinyin),
-            "pinyin_raw": pinyin,
-            "definition": result,
-        }
-
-        return entry
-
-    def get_pinyin(self, phrase: str) -> Optional[str]:
-        """Get pinyin for a phrase"""
-        if not phrase:
-            return ""
-
-        for end_index in range(len(phrase), 0, -1):
-            segment = phrase[:end_index]
-            entry = self.lookup_best(segment)
-
-            if entry is not None:
-                remaining_phrase = phrase[end_index:]
-
-                recursive_pinyin = self.get_pinyin(remaining_phrase)
-
-                if recursive_pinyin is not None:
-                    return entry["pinyin"] + " " + recursive_pinyin
-
-        return None  # Return None to indicate failure
 
     def get_definition(self, phrase: str) -> Optional[str]:
         """Get English definition for a phrase"""
@@ -277,3 +210,62 @@ def get_dictionary() -> ChineseDictionary:
     if _dictionary_instance is None:
         _dictionary_instance = ChineseDictionary()
     return _dictionary_instance
+
+
+def cedict_lookup_best(phrase: str) -> Optional[Dict]:
+    """
+    Look up a phrase and return the first (best) match
+
+    Args:
+        phrase: Chinese phrase to look up
+
+    Returns:
+        First matching entry, or None if not found
+    """
+    matches = cedict_lookup(phrase)
+    if matches:
+        return matches[0]
+    return None
+
+
+def cedict_lookup(phrase: str) -> Optional[List[Dict]]:
+    """
+    Look up a Chinese phrase in the dictionary
+
+    Args:
+        phrase: Chinese phrase to look up
+
+    Returns:
+        List of matching entries, or None if not found
+    """
+    dictionary = get_dictionary()
+    return dictionary.entries.get(phrase)
+
+
+def get_pinyin(phrase: str) -> Optional[str]:
+
+    """Get pinyin for a phrase"""
+    if not phrase:
+        return ""
+
+    for end_index in range(len(phrase), 0, -1):
+        segment = phrase[:end_index]
+        entry = cedict_lookup_best(segment)
+
+        if entry is not None:
+            remaining_phrase = phrase[end_index:]
+
+            recursive_pinyin = get_pinyin(remaining_phrase)
+
+            if recursive_pinyin is not None:
+                return entry["pinyin"] + " " + recursive_pinyin
+
+    return ""
+
+
+def hf_translate(text):
+    result = client.translation(
+        text,
+        model="Helsinki-NLP/opus-mt-zh-en",
+    )
+    return result.translation_text

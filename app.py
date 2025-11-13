@@ -34,7 +34,7 @@ def process_text():
     if not text:
         return jsonify({"error": "No text provided"}), 400
 
-    result = process_chinese_text(text, dictionary)
+    result = process_chinese_text(text)
     return jsonify(result)
 
 
@@ -70,7 +70,7 @@ def read_aloud():
 
     voice_id = "Zhiyu"
     language_code = "cmn-CN"
-    engine = "standard"
+    engine = "neural"
 
     synthesize_kwargs = {
         "Text": text,

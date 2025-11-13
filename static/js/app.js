@@ -9,6 +9,26 @@ let speechMarks = [];
 let phraseSpans = [];
 let currentHighlightedSpans = new Set();
 
+// Audio cache for phrase pronunciations
+let audioCache = new Map();
+
+// Cache cleanup interval (cleanup every 5 minutes)
+const CACHE_CLEANUP_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
+const CACHE_MAX_AGE = 30 * 60 * 1000; // 30 minutes max age
+
+// Clean up old cached audio to prevent memory leaks
+function cleanupAudioCache() {
+    const now = Date.now();
+    for (const [text, data] of audioCache.entries()) {
+        if (now - data.timestamp > CACHE_MAX_AGE) {
+            audioCache.delete(text);
+        }
+    }
+}
+
+// Start cache cleanup interval
+setInterval(cleanupAudioCache, CACHE_CLEANUP_INTERVAL);
+
 const readAloudBtn = document.getElementById('read-aloud-btn');
 const readAloudAudio = document.getElementById('read-aloud-audio');
 
@@ -237,6 +257,77 @@ function updateHighlights() {
     });
 }
 
+// Play audio for individual phrase using AWS Polly
+async function playPhraseAudio(text) {
+    if (!text || !text.trim()) {
+        return;
+    }
+
+    const trimmedText = text.trim();
+
+    // Check cache first
+    if (audioCache.has(trimmedText)) {
+        const cachedData = audioCache.get(trimmedText);
+        try {
+            // Create audio element and play from cached blob
+            const audio = new Audio(URL.createObjectURL(cachedData.blob));
+            audio.play().catch(error => {
+                console.warn('Audio playback failed:', error);
+            });
+        } catch (error) {
+            console.error('Cached audio playback error:', error);
+            alert('Failed to play cached pronunciation. Please try again.');
+        }
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/read-aloud', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ text: trimmedText }),
+        });
+
+        let data = {};
+        try {
+            data = await response.json();
+        } catch (jsonError) {
+            // Intentionally swallow JSON parsing errors to provide a generic message.
+        }
+
+        if (!response.ok) {
+            const message = data.error || 'Failed to generate audio. Please try again.';
+            throw new Error(message);
+        }
+
+        if (!data.audio) {
+            throw new Error('No audio returned from server.');
+        }
+
+        // Convert base64 to audio blob
+        const audioBuffer = base64ToArrayBuffer(data.audio);
+        const blob = new Blob([audioBuffer], { type: data.contentType || 'audio/mpeg' });
+
+        // Cache the audio data
+        audioCache.set(trimmedText, {
+            blob: blob,
+            contentType: data.contentType || 'audio/mpeg',
+            timestamp: Date.now()
+        });
+
+        // Create audio element and play
+        const audio = new Audio(URL.createObjectURL(blob));
+        audio.play().catch(error => {
+            console.warn('Audio playback failed:', error);
+        });
+    } catch (error) {
+        console.error('Phrase audio error:', error);
+        alert('Failed to play pronunciation. Please try again.');
+    }
+}
+
 if (readAloudBtn) {
     readAloudBtn.addEventListener('click', handleReadAloud);
 }
@@ -350,13 +441,14 @@ function displayProcessedText(phrases) {
 
         const span = document.createElement('span');
         span.className = 'phrase';
-        span.textContent = phrase.text;
+        // For sentence-ending periods, display just the period, not the full sentence
+        span.textContent = phrase.is_sentence_end ? '。' : phrase.text;
         span.dataset.pinyin = phrase.pinyin || '';
         span.dataset.definition = phrase.definition || '';
         span.dataset.index = index;
 
-        // Add click event listener if there's pinyin or definition
-        if (phrase.pinyin || phrase.definition) {
+        // Add click event listener if there's pinyin or definition, or if it's a sentence-ending period
+        if (phrase.pinyin || phrase.definition || phrase.is_sentence_end) {
             span.classList.add('clickable');
             span.addEventListener('click', (e) => {
                 showPhraseDetails(phrase, e.target);
@@ -385,11 +477,95 @@ function showPhraseDetails(phrase, clickedElement) {
         clickedElement.classList.add('active');
     }
 
+    // Check if this is a sentence-ending period
+    if (phrase.is_sentence_end) {
+        // Display full sentence and translation
+        const sentenceHeader = document.createElement('div');
+        sentenceHeader.className = 'sentence-header';
+        sentenceHeader.textContent = 'Full Sentence:';
+        sentenceHeader.style.fontWeight = 'bold';
+        sentenceHeader.style.marginBottom = '10px';
+        detailsPanel.appendChild(sentenceHeader);
+
+        // Chinese sentence
+        const chineseSentence = document.createElement('div');
+        chineseSentence.className = 'chinese-sentence';
+        chineseSentence.textContent = phrase.text + '。';
+        chineseSentence.style.fontSize = '18px';
+        chineseSentence.style.marginBottom = '10px';
+        chineseSentence.style.lineHeight = '1.6';
+        detailsPanel.appendChild(chineseSentence);
+
+        // English translation
+        const translationHeader = document.createElement('div');
+        translationHeader.className = 'translation-header';
+        translationHeader.textContent = 'English Translation:';
+        translationHeader.style.fontWeight = 'bold';
+        translationHeader.style.marginBottom = '5px';
+        translationHeader.style.marginTop = '15px';
+        detailsPanel.appendChild(translationHeader);
+
+        const englishTranslation = document.createElement('div');
+        englishTranslation.className = 'english-translation';
+        englishTranslation.textContent = phrase.definition;
+        englishTranslation.style.fontSize = '16px';
+        englishTranslation.style.color = 'white';
+        englishTranslation.style.lineHeight = '1.5';
+        englishTranslation.style.fontStyle = 'italic';
+        detailsPanel.appendChild(englishTranslation);
+
+        return; // Skip the normal phrase display
+    }
+
+    // Normal phrase display for non-sentence-ending periods
     // Phrase text
     const phraseText = document.createElement('div');
     phraseText.className = 'phrase-text';
     phraseText.textContent = phrase.text;
     detailsPanel.appendChild(phraseText);
+
+    // Speaker button
+    const speakerBtn = document.createElement('button');
+    speakerBtn.className = 'speaker-btn';
+    speakerBtn.innerHTML = audioCache.has(phrase.text.trim()) ? '🔊' : '🔊'; // Same icon, but could differentiate if needed
+    speakerBtn.title = audioCache.has(phrase.text.trim()) ? 'Listen to pronunciation (cached)' : 'Listen to pronunciation';
+    speakerBtn.addEventListener('click', async () => {
+        const originalContent = speakerBtn.innerHTML;
+        const isCached = audioCache.has(phrase.text.trim());
+
+        if (!isCached) {
+            speakerBtn.innerHTML = '⏳'; // Loading spinner
+            speakerBtn.disabled = true;
+        }
+
+        try {
+            await playPhraseAudio(phrase.text);
+            // Update button to show it's now cached
+            if (!isCached) {
+                speakerBtn.title = 'Listen to pronunciation (cached)';
+            }
+        } finally {
+            if (!isCached) {
+                speakerBtn.innerHTML = '🔊';
+                speakerBtn.disabled = false;
+            }
+        }
+    });
+    detailsPanel.appendChild(speakerBtn);
+
+    // HSK level (from stored data)
+    if (phrase.hsk_level) {
+        const hskLevelDiv = document.createElement('div');
+        hskLevelDiv.className = 'hsk-level';
+        hskLevelDiv.textContent = `HSK Level: ${phrase.hsk_level}`;
+        detailsPanel.appendChild(hskLevelDiv);
+    } else {
+        const hskLevelDiv = document.createElement('div');
+        hskLevelDiv.className = 'hsk-level';
+        hskLevelDiv.textContent = 'HSK Level: Not in HSK vocabulary';
+        hskLevelDiv.style.color = '#666';
+        detailsPanel.appendChild(hskLevelDiv);
+    }
 
     // Save button
     const saveBtn = document.createElement('button');
