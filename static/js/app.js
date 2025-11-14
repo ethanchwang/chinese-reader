@@ -31,6 +31,7 @@ setInterval(cleanupAudioCache, CACHE_CLEANUP_INTERVAL);
 
 const readAloudBtn = document.getElementById('read-aloud-btn');
 const readAloudAudio = document.getElementById('read-aloud-audio');
+const playbackSpeedSelect = document.getElementById('playback-speed');
 
 function resetAudioPlayer() {
     if (!readAloudAudio) {
@@ -54,6 +55,24 @@ function resetAudioPlayer() {
     clearAllHighlights();
     speechMarks = [];
     phraseSpans = [];
+}
+
+function applyPlaybackSpeed() {
+    if (!readAloudAudio || !playbackSpeedSelect) {
+        return;
+    }
+
+    const speed = parseFloat(playbackSpeedSelect.value);
+    readAloudAudio.playbackRate = speed;
+}
+
+function updatePlaybackSpeedForAudio(audioElement) {
+    if (!audioElement || !playbackSpeedSelect) {
+        return;
+    }
+
+    const speed = parseFloat(playbackSpeedSelect.value);
+    audioElement.playbackRate = speed;
 }
 
 function updateReadAloudAvailability() {
@@ -132,6 +151,9 @@ async function handleReadAloud() {
         readAloudAudio.src = currentAudioUrl;
         readAloudAudio.hidden = false;
         readAloudAudio.load();
+
+        // Apply current playback speed
+        applyPlaybackSpeed();
 
         try {
             await readAloudAudio.play();
@@ -271,6 +293,7 @@ async function playPhraseAudio(text) {
         try {
             // Create audio element and play from cached blob
             const audio = new Audio(URL.createObjectURL(cachedData.blob));
+            updatePlaybackSpeedForAudio(audio);
             audio.play().catch(error => {
                 console.warn('Audio playback failed:', error);
             });
@@ -319,6 +342,7 @@ async function playPhraseAudio(text) {
 
         // Create audio element and play
         const audio = new Audio(URL.createObjectURL(blob));
+        updatePlaybackSpeedForAudio(audio);
         audio.play().catch(error => {
             console.warn('Audio playback failed:', error);
         });
@@ -343,6 +367,10 @@ if (readAloudAudio) {
             clearAllHighlights();
         }
     });
+}
+
+if (playbackSpeedSelect) {
+    playbackSpeedSelect.addEventListener('change', applyPlaybackSpeed);
 }
 
 resetAudioPlayer();

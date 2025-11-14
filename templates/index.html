@@ -24,6 +24,19 @@
             <div class="reading-container">
                 <div class="reading-controls">
                     <button id="read-aloud-btn" class="read-aloud-btn" disabled>Read Aloud</button>
+                    <div class="speed-control">
+                        <label for="playback-speed">Speed:</label>
+                        <select id="playback-speed" class="playback-speed-select">
+                            <option value="0.5">0.5x</option>
+                            <option value="0.7">0.7x</option>
+                            <option value="0.75">0.75x</option>
+                            <option value="0.85">0.85x</option>
+                            <option value="1.0" selected>1.0x</option>
+                            <option value="1.25">1.25x</option>
+                            <option value="1.5">1.5x</option>
+                            <option value="2.0">2.0x</option>
+                        </select>
+                    </div>
                     <audio id="read-aloud-audio" class="read-aloud-audio" controls hidden></audio>
                 </div>
                 <div id="reading-area" class="reading-area">

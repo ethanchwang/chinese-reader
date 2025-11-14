@@ -172,6 +172,43 @@ body {
     opacity: 0.6;
 }
 
+.speed-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.speed-control label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.playback-speed-select {
+    padding: 6px 8px;
+    background: #333;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s, border-color 0.2s;
+    min-width: 70px;
+}
+
+.playback-speed-select:hover {
+    background: #444;
+    border-color: #666;
+}
+
+.playback-speed-select:focus {
+    outline: none;
+    border-color: #777;
+    background: #444;
+}
+
 .read-aloud-audio {
     width: 100%;
     max-width: 420px;
