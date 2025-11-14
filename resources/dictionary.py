@@ -6,6 +6,7 @@ Parses the cedict_ts.u8 file and provides lookup functionality
 import os
 import re
 from typing import Dict, List, Optional
+from functools import lru_cache
 from huggingface_hub import InferenceClient
 
 from utils.aws import get_ssm_parameter
@@ -16,6 +17,7 @@ def get_huggingface_token():
     SSM_PARAMETER_NAME = "/chinese-reader/HF_INFERENCE_TOKEN"
 
     local_token = os.environ.get(LOCAL_ENV_VAR_NAME)
+    assert local_token != "your_huggingface_token_here", "HF_INFERENCE_TOKEN is not set"
     if local_token:
         print("Token retrieved from local environment variable.")
         return local_token
@@ -34,6 +36,7 @@ def get_huggingface_token():
 client = InferenceClient(
     provider="hf-inference",
     api_key=get_huggingface_token(),
+    timeout=60,  # 30 second timeout for API calls
 )
 
 
@@ -243,7 +246,6 @@ def cedict_lookup(phrase: str) -> Optional[List[Dict]]:
 
 
 def get_pinyin(phrase: str) -> Optional[str]:
-
     """Get pinyin for a phrase"""
     if not phrase:
         return ""
@@ -263,9 +265,27 @@ def get_pinyin(phrase: str) -> Optional[str]:
     return ""
 
 
+@lru_cache(maxsize=1000)
 def hf_translate(text):
-    result = client.translation(
-        text,
-        model="Helsinki-NLP/opus-mt-zh-en",
-    )
-    return result.translation_text
+    max_retries = 2
+    for attempt in range(max_retries + 1):
+        try:
+            result = client.translation(
+                text,
+                model="Helsinki-NLP/opus-mt-zh-en",
+            )
+            return result.translation_text
+        except Exception as e:
+            if attempt < max_retries:
+                print(
+                    f"Translation attempt {attempt + 1} failed for text '{text}': {e}. Retrying..."
+                )
+                import time
+
+                time.sleep(1)  # Wait 1 second before retry
+            else:
+                print(
+                    f"Translation failed after {max_retries + 1} attempts for text '{text}': {e}"
+                )
+                # Return a fallback message instead of crashing
+                return f"[Translation unavailable: {str(e)}]"

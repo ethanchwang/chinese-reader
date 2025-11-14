@@ -1,7 +1,10 @@
 Flask
 flask-cors
+flask-limiter
+flask-caching
 requests
 gunicorn
 hanlp
 huggingface-hub
 boto3
+python-dotenv

@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor, Future
 
 
 tok = hanlp.load(hanlp.pretrained.tok.COARSE_ELECTRA_SMALL_ZH, devices=["cpu"])
-executor = ThreadPoolExecutor(max_workers=10)
+executor = ThreadPoolExecutor(max_workers=3)
 
 
 @dataclass
