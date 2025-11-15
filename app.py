@@ -129,11 +129,10 @@ def before_request():
 # API routes must come before catch-all routes
 @app.route("/api/process", methods=["POST", "OPTIONS"])
 @limiter.limit("10 per minute; 100 per hour")  # More permissive for text processing
-@cache.cached(timeout=3600, query_string=True)  # Cache results for 1 hour
 def process_text():
     """
     API endpoint to process Chinese text and return phrases with pinyin and definitions.
-    Includes rate limiting, caching, size limits, and input validation.
+    Includes rate limiting, size limits, and input validation.
     """
     try:
         data = request.get_json()
