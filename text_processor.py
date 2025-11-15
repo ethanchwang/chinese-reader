@@ -5,10 +5,21 @@ from typing import List, Dict, Optional, Any
 from resources.utils import get_hsk_level
 from resources.dictionary import cedict_lookup, get_pinyin, hf_translate
 from concurrent.futures import ThreadPoolExecutor, Future
+from utils.aws import get_ssm_parameter
+import os
 
 
 tok = hanlp.load(hanlp.pretrained.tok.COARSE_ELECTRA_SMALL_ZH, devices=["cpu"])
-executor = ThreadPoolExecutor(max_workers=3)
+
+num_workers = 30
+if os.environ.get("APP_ENV") != "development":
+    SSM_NUM_WORKERS_PARAMETER_NAME = "/chinese-reader/NUM_TRANSLATION_WORKERS"
+    try:
+        ssm_num_workers = get_ssm_parameter(SSM_NUM_WORKERS_PARAMETER_NAME)
+        num_workers = int(ssm_num_workers)
+    except Exception as e:
+        print(f"ERROR: Could not retrieve number of translation workers from SSM: {e}")
+executor = ThreadPoolExecutor(max_workers=num_workers)
 
 
 @dataclass
