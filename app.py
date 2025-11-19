@@ -55,7 +55,7 @@ suspicious_ips = set()
 
 # Request size limits
 MAX_PROCESS_TEXT_LENGTH = 5000  # characters for text processing
-MAX_SPEECH_TEXT_LENGTH = 1000  # characters for speech synthesis
+MAX_SPEECH_TEXT_LENGTH = 2000  # characters for speech synthesis
 
 dictionary = init_dictionary()
 
